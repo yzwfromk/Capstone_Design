@@ -1,0 +1,107 @@
+function callback_cmdvel_sub(msg)
+    local Vl = msg.linear.x * 5
+    local Vr = msg.angular.z * 5
+    local Vcollector = msg.angular.x
+    
+    sim.setJointMaxForce(joint11, 3.1)
+    sim.setJointMaxForce(joint21, 3.1)
+    sim.setJointMaxForce(joint12, 3.1)
+    sim.setJointMaxForce(joint22, 3.1)
+    sim.setJointMaxForce(joint13, 3.1)
+    sim.setJointMaxForce(joint23, 3.1)
+
+    sim.setJointTargetVelocity(joint11,Vl - 1.83*Vr)
+    sim.setJointTargetVelocity(joint21,Vl + 1.83*Vr)
+    sim.setJointTargetVelocity(joint12,Vl - 1.5*Vr)
+    sim.setJointTargetVelocity(joint22,Vl + 1.5*Vr)
+    sim.setJointTargetVelocity(joint13,Vl - 1.83*Vr)
+    sim.setJointTargetVelocity(joint23,Vl + 1.83*Vr)
+    
+    if(Vcollector~=0) then
+        sim.setJointTargetVelocity(joint00,Vcollector)
+    end
+
+    sim.addStatusbarMessage(string.format("Vl:%f Vr:%f",Vl, Vr))
+end
+
+
+function callback_ball_delivery_sub(msg)
+    local velocity=7
+    local velocity2=50
+    local th1=1
+    local thdown=2
+    local delivery_mode=msg.data
+    angle=sim.getJointPosition(joint00)
+    sim.addStatusbarMessage(string.format("delivery/ %f count %f angle %f", delivery_mode, count, angle))
+   
+   if (delivery_mode==1)then
+        
+        if (count<=80) then
+            if(math.abs(angle)>th1) then
+                sim.setJointTargetVelocity(joint00, -velocity)
+            elseif ( math.abs(angle)>0.1 ) then
+                sim.setJointTargetVelocity(joint00, -velocity*(math.abs(angle)+0.1)/(th1+0.1))
+            elseif ( math.abs(angle)<0.1 ) then
+                count=count+1
+                sim.setJointTargetVelocity(joint00,0)
+            end
+        end
+
+        if( count > 80 ) then
+            if ( math.abs(angle)<th1) then
+                sim.setJointTargetVelocity(joint00, velocity*(math.abs(angle))/(th1))
+            elseif ( math.abs(angle)>th1) then
+                sim.setJointTargetVelocity(joint00, velocity*(thdown-math.abs(angle))/(thdown-th1))
+            end
+        end
+    elseif delivery_mode==2 then
+        if(count2<300) then
+            sim.setJointTargetVelocity(joint01, velocity2)
+        end
+        if(count2>=300) then
+            sim.setJointTargetVelocity(joint02, velocity2)
+        end
+        count2=count2+1
+
+    elseif delivery_mode==0 then
+        sim.setJointTargetVelocity(joint00, 10)
+        count=0
+    end
+end
+
+function sysCall_init()
+    -- do some initialization here
+    joint00 = sim.getObjectHandle("collector_joint")
+    joint01 = sim.getObjectHandle("door_joint_l")
+    joint02 = sim.getObjectHandle("door_joint_r")
+
+
+    joint11 = sim.getObjectHandle("11_joint")
+    joint21 = sim.getObjectHandle("21_joint")
+    joint12 = sim.getObjectHandle("12_joint")
+    joint22 = sim.getObjectHandle("22_joint")
+    joint13 = sim.getObjectHandle("13_joint")
+    joint23 = sim.getObjectHandle("23_joint")
+
+    cmdvelSub=simROS.subscribe('/command_vel','geometry_msgs/Twist','callback_cmdvel_sub')
+    count=0
+    count2=0
+    delvelSub=simROS.subscribe('/ball_delivery','std_msgs/Int8','callback_ball_delivery_sub')
+    
+    transform={header={stamp=simROS.getTime(), frame_id='map'}, child_frame_id='velodyneVPL', transform={translation={x=0, y=0, z=0}, rotation={x=0, y=0, z=0, w=1}}}
+    simROS.sendTransform(transform)
+     
+end
+
+function sysCall_actuation()
+    -- put your actuation code here
+
+
+end
+
+function sysCall_cleanup()
+    -- do some clean-up here
+    simROS.shutdownSubscriber(cmdvelSub)
+    simROS.shutdownSubscriber(delvelSub)
+        
+end

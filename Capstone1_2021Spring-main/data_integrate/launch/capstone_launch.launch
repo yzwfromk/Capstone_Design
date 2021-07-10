@@ -1,0 +1,7 @@
+<launch>
+  <node name="data_integration_node" pkg="data_integrate"  type="data_integration_node"/>
+  <node name="data_show_node" pkg="data_integrate"  type="data_show_node"/>
+  <node name="path_planner" pkg="data_integrate"  type="path_planner" />
+  <node name="ball_detect_node" pkg="ball_detection"  type="ball_detect_node" />
+  <node name="localization_node" pkg="localization"  type="localization_node" />
+</launch>
